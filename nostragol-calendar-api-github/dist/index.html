@@ -86,6 +86,7 @@
       }
 
       input,
+      select,
       textarea {
         width: 100%;
         border: 1px solid rgba(255, 255, 255, 0.16);
@@ -103,6 +104,7 @@
       }
 
       input:focus,
+      select:focus,
       textarea:focus {
         border-color: #c7eb4c;
         box-shadow: 0 0 0 3px rgba(199, 235, 76, 0.18);
@@ -172,6 +174,11 @@
         <h2>Nuevo evento</h2>
         <form id="event-form">
           <label class="full">
+            Tipo de evento
+            <select id="eventType" name="eventType"></select>
+          </label>
+
+          <label class="full">
             Titulo
             <input
               id="title"
@@ -220,16 +227,103 @@
       </section>
     </main>
 
-    <script src="config.js"></script>
+    <script src="config.js?v=render-1"></script>
     <script>
       const form = document.querySelector("#event-form");
+      const eventTypeInput = document.querySelector("#eventType");
       const status = document.querySelector("#status");
       const submitButton = document.querySelector("#submit-button");
       const startInput = document.querySelector("#start");
       const endInput = document.querySelector("#end");
+      const titleInput = document.querySelector("#title");
+      const reminderMinutesInput = document.querySelector("#reminderMinutes");
+      const descriptionInput = document.querySelector("#description");
       const adminKeyInput = document.querySelector("#adminKey");
       const apiBaseUrl = (window.NOSTRAGOL_API_BASE_URL || "").replace(/\/$/, "");
       const storedAdminKey = window.localStorage.getItem("nostragolAdminApiKey");
+      const fallbackEventTypes = [
+        {
+          id: "prediction-open",
+          label: "Apertura de pronosticos",
+          title: "Abrir pronosticos Nostragol",
+          durationMinutes: 20,
+          reminderMinutes: [1440, 120, 30],
+          description: "Habilitar pronosticos, revisar partidos activos y confirmar que las ligas puedan participar.",
+        },
+        {
+          id: "prediction-close",
+          label: "Cierre de pronosticos",
+          title: "Cierre pronosticos Nostragol",
+          durationMinutes: 30,
+          reminderMinutes: [1440, 60, 10],
+          description: "Cerrar pronosticos antes del inicio del partido y revisar que no queden picks pendientes.",
+        },
+        {
+          id: "match-preview",
+          label: "Publicacion previa",
+          title: "Publicar previa Nostragol",
+          durationMinutes: 30,
+          reminderMinutes: [1440, 180, 30],
+          description: "Publicar previa del partido, llamado a pronosticar y recordatorio para ligas privadas.",
+        },
+        {
+          id: "match-kickoff",
+          label: "Inicio de partido",
+          title: "Inicio partido Nostragol",
+          durationMinutes: 120,
+          reminderMinutes: [60, 15],
+          description: "Monitorear inicio del partido, estado de pronosticos y actividad de usuarios.",
+        },
+        {
+          id: "live-coverage",
+          label: "Cobertura live",
+          title: "Cobertura live Nostragol",
+          durationMinutes: 90,
+          reminderMinutes: [30, 10],
+          description: "Acompanhar partido, publicar hitos relevantes y preparar cierre de puntajes.",
+        },
+        {
+          id: "results-ranking",
+          label: "Resultados y ranking",
+          title: "Actualizar resultados y ranking Nostragol",
+          durationMinutes: 45,
+          reminderMinutes: [60, 15],
+          description: "Cargar resultado final, validar puntajes, actualizar rankings y revisar ganadores.",
+        },
+        {
+          id: "social-post",
+          label: "Post redes sociales",
+          title: "Publicar contenido Nostragol",
+          durationMinutes: 30,
+          reminderMinutes: [1440, 120, 30],
+          description: "Publicar contenido programado en redes sociales y revisar interacciones.",
+        },
+        {
+          id: "trivia-challenge",
+          label: "Trivia o desafio",
+          title: "Activar trivia Nostragol",
+          durationMinutes: 30,
+          reminderMinutes: [1440, 60, 15],
+          description: "Activar trivia, reto o dinamica de comunidad asociada a partidos y rankings.",
+        },
+        {
+          id: "sponsor-activation",
+          label: "Activacion sponsor",
+          title: "Activacion sponsor Nostragol",
+          durationMinutes: 45,
+          reminderMinutes: [2880, 1440, 120],
+          description: "Coordinar pieza, premio no monetario, publicaciones y medicion de activacion de marca.",
+        },
+        {
+          id: "internal-task",
+          label: "Tarea interna",
+          title: "Tarea operativa Nostragol",
+          durationMinutes: 30,
+          reminderMinutes: [1440, 60],
+          description: "Tarea interna del equipo Nostragol.",
+        },
+      ];
+      let eventTypes = fallbackEventTypes;
 
       if (storedAdminKey) {
         adminKeyInput.value = storedAdminKey;
@@ -246,6 +340,62 @@
       const defaultEnd = new Date(defaultStart.getTime() + 30 * 60000);
       startInput.value = toDatetimeLocalValue(defaultStart);
       endInput.value = toDatetimeLocalValue(defaultEnd);
+
+      function addMinutes(date, minutes) {
+        return new Date(date.getTime() + minutes * 60000);
+      }
+
+      function getSelectedEventType() {
+        return eventTypes.find((eventType) => eventType.id === eventTypeInput.value);
+      }
+
+      function applyEventTypeTemplate() {
+        const eventType = getSelectedEventType();
+
+        if (!eventType) {
+          return;
+        }
+
+        titleInput.value = eventType.title;
+        reminderMinutesInput.value = eventType.reminderMinutes.join(",");
+        descriptionInput.value = eventType.description;
+
+        const startDate = new Date(startInput.value);
+
+        if (!Number.isNaN(startDate.getTime())) {
+          endInput.value = toDatetimeLocalValue(addMinutes(startDate, eventType.durationMinutes));
+        }
+      }
+
+      async function loadEventTypes() {
+        eventTypeInput.innerHTML = fallbackEventTypes
+          .map((eventType) => `<option value="${eventType.id}">${eventType.label}</option>`)
+          .join("");
+        eventTypeInput.value = "prediction-close";
+        applyEventTypeTemplate();
+
+        try {
+          const response = await fetch(`${apiBaseUrl}/api/calendar/event-types`);
+          const data = await response.json();
+
+          if (!response.ok || !data.ok) {
+            throw new Error(data.error || "No se pudieron cargar los tipos de evento.");
+          }
+
+          eventTypes = data.eventTypes;
+          eventTypeInput.innerHTML = eventTypes
+            .map((eventType) => `<option value="${eventType.id}">${eventType.label}</option>`)
+            .join("");
+          eventTypeInput.value = "prediction-close";
+          applyEventTypeTemplate();
+        } catch (error) {
+          eventTypes = fallbackEventTypes;
+        }
+      }
+
+      eventTypeInput.addEventListener("change", applyEventTypeTemplate);
+      startInput.addEventListener("change", applyEventTypeTemplate);
+      loadEventTypes();
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();

@@ -1,1 +1,1 @@
-window.NOSTRAGOL_API_BASE_URL = "https://your-nostragol-backend.example.com";
+window.NOSTRAGOL_API_BASE_URL = "https://nostragol-calendar-api.onrender.com";

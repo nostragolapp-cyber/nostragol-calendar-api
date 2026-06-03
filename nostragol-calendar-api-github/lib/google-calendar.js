@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { google } = require("googleapis");
+const { getEventTypeById } = require("./event-types");
 
 const SCOPES = ["https://www.googleapis.com/auth/calendar.events"];
 
@@ -96,10 +97,26 @@ function normalizeDateTime(value) {
 
 function buildCalendarEvent(event, fallbackTimeZone) {
   const timeZone = event.timeZone || fallbackTimeZone || "America/Santiago";
+  const eventType = event.eventType ? getEventTypeById(event.eventType) : null;
+  const descriptionParts = [];
+
+  if (eventType) {
+    descriptionParts.push(`Tipo Nostragol: ${eventType.label}`);
+  }
+
+  if (event.description) {
+    descriptionParts.push(event.description);
+  }
+
   const requestBody = {
     summary: requireEventValue(event, "title"),
-    description: event.description || "",
+    description: descriptionParts.join("\n\n"),
     location: event.location || "",
+    extendedProperties: {
+      private: {
+        nostragolEventType: event.eventType || "custom",
+      },
+    },
     reminders: buildReminders(event.reminderMinutes),
   };
 
