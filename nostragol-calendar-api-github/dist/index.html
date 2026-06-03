@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nostragol</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #07120f;
+        color: #f6fbf7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          linear-gradient(145deg, rgba(12, 112, 74, 0.24), transparent 45%),
+          linear-gradient(315deg, rgba(198, 233, 72, 0.16), transparent 38%),
+          #07120f;
+      }
+
+      main {
+        width: min(920px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 36px 0;
+      }
+
+      header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 28px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 6vw, 4rem);
+        line-height: 1;
+      }
+
+      .tagline {
+        max-width: 440px;
+        color: #b9c8c0;
+        font-size: 1rem;
+        line-height: 1.5;
+      }
+
+      section {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        background: rgba(8, 24, 18, 0.82);
+        box-shadow: 0 18px 70px rgba(0, 0, 0, 0.28);
+        padding: 22px;
+      }
+
+      form {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      label {
+        display: grid;
+        gap: 7px;
+        color: #dbe8df;
+        font-size: 0.9rem;
+        font-weight: 650;
+      }
+
+      label.full {
+        grid-column: 1 / -1;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 6px;
+        background: #101f19;
+        color: #f6fbf7;
+        font: inherit;
+        padding: 12px 13px;
+        outline: none;
+      }
+
+      textarea {
+        min-height: 110px;
+        resize: vertical;
+      }
+
+      input:focus,
+      textarea:focus {
+        border-color: #c7eb4c;
+        box-shadow: 0 0 0 3px rgba(199, 235, 76, 0.18);
+      }
+
+      button {
+        width: fit-content;
+        min-height: 44px;
+        border: 0;
+        border-radius: 6px;
+        background: #c7eb4c;
+        color: #07120f;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 800;
+        padding: 0 18px;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+      }
+
+      .actions {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-height: 44px;
+      }
+
+      .status {
+        color: #b9c8c0;
+        font-size: 0.95rem;
+        line-height: 1.35;
+      }
+
+      .status a {
+        color: #c7eb4c;
+      }
+
+      @media (max-width: 720px) {
+        header,
+        form {
+          grid-template-columns: 1fr;
+        }
+
+        header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>Nostragol</h1>
+        </div>
+        <p class="tagline">
+          Agenda hitos, cierres de pronosticos y tareas del calendario operativo de Nostragol.
+        </p>
+      </header>
+
+      <section>
+        <h2>Nuevo evento</h2>
+        <form id="event-form">
+          <label class="full">
+            Titulo
+            <input
+              id="title"
+              name="title"
+              autocomplete="off"
+              required
+              value="Cierre pronosticos Nostragol"
+            />
+          </label>
+
+          <label class="full">
+            Clave admin
+            <input id="adminKey" name="adminKey" type="password" autocomplete="current-password" required />
+          </label>
+
+          <label>
+            Inicio
+            <input id="start" name="start" type="datetime-local" required />
+          </label>
+
+          <label>
+            Termino
+            <input id="end" name="end" type="datetime-local" required />
+          </label>
+
+          <label>
+            Recordatorios en minutos
+            <input id="reminderMinutes" name="reminderMinutes" value="1440,60,10" />
+          </label>
+
+          <label>
+            Lugar
+            <input id="location" name="location" autocomplete="off" placeholder="Opcional" />
+          </label>
+
+          <label class="full">
+            Descripcion
+            <textarea id="description" name="description">Evento creado desde la app Nostragol.</textarea>
+          </label>
+
+          <div class="actions">
+            <button id="submit-button" type="submit">Agendar</button>
+            <p id="status" class="status" aria-live="polite"></p>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script src="config.js"></script>
+    <script>
+      const form = document.querySelector("#event-form");
+      const status = document.querySelector("#status");
+      const submitButton = document.querySelector("#submit-button");
+      const startInput = document.querySelector("#start");
+      const endInput = document.querySelector("#end");
+      const adminKeyInput = document.querySelector("#adminKey");
+      const apiBaseUrl = (window.NOSTRAGOL_API_BASE_URL || "").replace(/\/$/, "");
+      const storedAdminKey = window.localStorage.getItem("nostragolAdminApiKey");
+
+      if (storedAdminKey) {
+        adminKeyInput.value = storedAdminKey;
+      }
+
+      function toDatetimeLocalValue(date) {
+        const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+        return offsetDate.toISOString().slice(0, 16);
+      }
+
+      const defaultStart = new Date();
+      defaultStart.setDate(defaultStart.getDate() + 1);
+      defaultStart.setMinutes(0, 0, 0);
+      const defaultEnd = new Date(defaultStart.getTime() + 30 * 60000);
+      startInput.value = toDatetimeLocalValue(defaultStart);
+      endInput.value = toDatetimeLocalValue(defaultEnd);
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        submitButton.disabled = true;
+        status.textContent = "Agendando...";
+
+        const formData = new FormData(form);
+        const payload = Object.fromEntries(formData.entries());
+        const adminKey = payload.adminKey;
+        delete payload.adminKey;
+        window.localStorage.setItem("nostragolAdminApiKey", adminKey);
+        payload.reminderMinutes = payload.reminderMinutes
+          .split(",")
+          .map((value) => Number.parseInt(value.trim(), 10))
+          .filter((value) => Number.isFinite(value));
+
+        try {
+          const response = await fetch(`${apiBaseUrl}/api/calendar/events`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Nostragol-Api-Key": adminKey,
+            },
+            body: JSON.stringify(payload),
+          });
+          const data = await response.json();
+
+          if (!response.ok || !data.ok) {
+            throw new Error(data.error || "No se pudo crear el evento.");
+          }
+
+          status.innerHTML = `Evento creado: <a href="${data.event.htmlLink}" target="_blank" rel="noreferrer">abrir en Google Calendar</a>`;
+        } catch (error) {
+          status.textContent = error.message;
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

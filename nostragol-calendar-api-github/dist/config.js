@@ -1,0 +1,1 @@
+window.NOSTRAGOL_API_BASE_URL = "";

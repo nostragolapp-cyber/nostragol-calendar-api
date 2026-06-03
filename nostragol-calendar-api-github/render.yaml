@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: nostragol-calendar-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: GOOGLE_CALENDAR_ID
+        value: nostragolapp@gmail.com
+      - key: GOOGLE_CALENDAR_TIME_ZONE
+        value: America/Santiago
+      - key: GOOGLE_SERVICE_ACCOUNT_KEY_BASE64
+        sync: false
+      - key: NOSTRAGOL_ADMIN_API_KEY
+        sync: false
+      - key: NOSTRAGOL_ALLOWED_ORIGINS
+        sync: false
