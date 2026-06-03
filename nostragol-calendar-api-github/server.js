@@ -3,6 +3,7 @@ const express = require("express");
 require("dotenv").config({ quiet: true });
 
 const { createCalendarEvent } = require("./lib/google-calendar");
+const { getEventTypes } = require("./lib/event-types");
 
 const app = express();
 const port = Number.parseInt(process.env.PORT || "3000", 10);
@@ -57,6 +58,10 @@ function requireAdminApiKey(request, response, next) {
 
 app.get("/api/health", (request, response) => {
   response.json({ ok: true });
+});
+
+app.get("/api/calendar/event-types", (request, response) => {
+  response.json({ ok: true, eventTypes: getEventTypes() });
 });
 
 app.post("/api/calendar/events", requireAdminApiKey, async (request, response) => {
